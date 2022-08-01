@@ -1,0 +1,6 @@
+
+*.dll
+/Automat/bin
+/Automat/obj
+.vs
+.editorconfig
