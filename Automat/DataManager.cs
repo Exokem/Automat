@@ -36,6 +36,10 @@ namespace Automat
         {
             Validate();
 
+            JObject modeData = new JObject();
+
+            IConfigurationMode.WriteExtraData(modeData);
+
             JObject configurationData = new JObject();
 
             JArray configurations = new JArray();
@@ -43,6 +47,7 @@ namespace Automat
             _configurations.ForEach(cfg => configurations.Add(cfg.Export()));
 
             configurationData["Configurations"] = configurations;
+            configurationData["ModeData"] = modeData;
 
             _saveFile.WriteString(configurationData.ToString());
         }
@@ -66,15 +71,23 @@ namespace Automat
                         configurationReceiver(cfg);
                     }
 
-                    catch (Exception) { }
+                    catch (Exception e) 
+                    {
+                        Console.WriteLine(e.StackTrace);
+                    }
                 }
+
+                JObject modeData = configurationData["ModeData"] as JObject;
+
+                if (modeData != null)
+                    IConfigurationMode.ReadExtraData(modeData);
             }
 
-            catch (Exception ex)
+            catch (Exception e)
             {
-
+                Console.WriteLine(e.StackTrace);
             }
-            
+
         }
     }
 
@@ -165,6 +178,27 @@ namespace Automat
                 collection.Add((string)item);
 
             return collection;
+        }
+
+        public static string GetString(this JObject data, string key, string def = null)
+        {
+            if (data.ContainsKey(key))
+                return (string)data[key];
+            return def;
+        }
+
+        public static int GetInt(this JObject data, string key, int def = 0)
+        {
+            if (data.ContainsKey(key))
+                return (int)data[key];
+            return def;
+        }
+
+        public static bool GetBool(this JObject data, string key, bool def = false)
+        {
+            if (data.ContainsKey(key))
+                return (bool)data[key];
+            return def;
         }
     }
 }

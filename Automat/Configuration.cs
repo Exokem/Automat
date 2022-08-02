@@ -23,7 +23,8 @@ namespace Automat
 
         HashSet<string> _blacklist, _whitelist;
 
-        HashSet<string> FileList => ScanMode == "Whitelist" ? _whitelist : _blacklist;
+        bool WhitelistEnabled => ScanMode == "Whitelist";
+        HashSet<string> FileList => WhitelistEnabled ? _whitelist : _blacklist;
 
         static readonly SolidColorBrush DarkWhite = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#e8e8e8"));
 
@@ -64,6 +65,13 @@ namespace Automat
             set => Set(ref _configurationMode, value);
         }
 
+        bool _expanded = true;
+        public bool Expanded
+        {
+            get => _expanded;
+            set => Set(ref _expanded, value);
+        }
+
         public ICommand RunConfiguration => new Command(Run);
         public ICommand SelectSourceCommand => new Command(SelectSource);
         public ICommand SelectDestinationCommand => new Command(SelectDestination);
@@ -87,16 +95,17 @@ namespace Automat
 
         public Configuration(JObject data) : this()
         {
-            Name = (string) data["Name"];
-            Source = (string) data["Source"];
-            Destination = (string) data["Destination"];
-            ConfigurationMode = (string) data["ConfigurationMode"];
-            ScanMode = (string)data[nameof(ScanMode)];
+            Name = data.GetString(nameof(Name));
+            Source = data.GetString(nameof(Source));
+            Destination = data.GetString(nameof(Destination));
+            ConfigurationMode = data.GetString(nameof(ConfigurationMode));
+            ScanMode = data.GetString(nameof(ScanMode));
+            Expanded = data.GetBool(nameof(Expanded));
 
             _whitelist = ((JArray)data["Whitelist"]).ToCollection(new HashSet<string>());
             _blacklist = ((JArray)data["Blacklist"]).ToCollection(new HashSet<string>());
 
-            ScanModeChanged();
+            RefreshList();
         }
 
         Grid FileDisplay(string file, int i)
@@ -130,7 +139,7 @@ namespace Automat
             return grid;
         }
 
-        void ScanModeChanged()
+        void RefreshList()
         {
             View.FileList.Children.Clear();
 
@@ -138,7 +147,11 @@ namespace Automat
 
             foreach (var file in FileList)
                 View.FileList.Children.Add(FileDisplay(file, i++));
+        }
 
+        void ScanModeChanged()
+        {
+            RefreshList();
             DataManager.Save();
         }
 
@@ -189,7 +202,12 @@ namespace Automat
 
         void Run()
         {
-            IConfigurationMode.Execute(ConfigurationMode, _source, _destination);
+            IConfigurationMode.Execute(ConfigurationMode, _source, _destination, IsFileValid);
+        }
+
+        bool IsFileValid(string path)
+        {
+            return WhitelistEnabled ? _whitelist.Contains(path) : !_blacklist.Contains(path);
         }
 
         void Set<V>(ref V v, V value, [CallerMemberName] string property = null)
@@ -210,6 +228,7 @@ namespace Automat
             data.Add("Destination", Destination);
             data.Add("ConfigurationMode", ConfigurationMode);
             data.Add(nameof(ScanMode), ScanMode);
+            data.Add(nameof(Expanded), Expanded);
 
             data.Add("Whitelist", _whitelist.ToJArray());
             data.Add("Blacklist", _blacklist.ToJArray());

@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Reflection;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
+using System.Diagnostics;
 
 namespace Automat
 {
@@ -50,7 +52,7 @@ namespace Automat
             return _registeredModes[key];
         }
 
-        public static void Execute(string key, DirectoryInfo source, DirectoryInfo destination)
+        public static void Execute(string key, DirectoryInfo source, DirectoryInfo destination, Func<string, bool> fileFilter)
         {
             if (key == null)
                 return;
@@ -60,15 +62,38 @@ namespace Automat
             if (mode == null)
                 return;
 
-            if (mode.Scan(source))
+            if (mode.Scan(source, fileFilter))
                 mode.Apply(destination);
+        }
+
+        internal static void WriteExtraData(JObject data)
+        {
+            foreach ((string key, IConfigurationMode mode) in _registeredModes)
+            {
+                JObject ex = new JObject();
+                mode.Write(ex);
+                data[key] = ex;
+            }
+        }
+
+        internal static void ReadExtraData(JObject data)
+        {
+            foreach ((string key, IConfigurationMode mode) in _registeredModes)
+            {
+                if (data.ContainsKey(key) && data[key] is JObject ex)
+                    mode.Read(ex);
+            }
         }
 
         string Key();
 
-        bool Scan(DirectoryInfo source);
+        bool Scan(DirectoryInfo source, Func<string, bool> fileFilter);
 
         void Apply(DirectoryInfo destination);
+
+        void Write(JObject data);
+
+        void Read(JObject data);
     }
 
     public class AsepriteConfiguration : IConfigurationMode
@@ -77,14 +102,57 @@ namespace Automat
 
         public string Key() => "Aseprite";
 
-        public bool Scan(DirectoryInfo source)
+        string AsepritePath;
+
+        string CommandString(string file, string destination) => $"@start \"\" \"{AsepritePath}\" -b \"{file}\" --save-as \"{destination}\\{{slice}}.png\"";
+
+        readonly Queue<FileInfo> _files = new Queue<FileInfo>();
+
+        public bool Scan(DirectoryInfo source, Func<string, bool> fileFilter)
         {
-            throw new NotImplementedException();
+            if (AsepritePath == null)
+                AsepritePath = FileDialogUtility.SelectFile("Select Aseprite Executable", from: Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86));
+
+            if (AsepritePath == null)
+                return false;
+
+            foreach (FileInfo file in source.EnumerateFiles().Where(file => fileFilter(file.FullName)))
+                _files.Enqueue(file);
+
+            return true;
         }
 
         public void Apply(DirectoryInfo destination)
         {
-            throw new NotImplementedException();
+            ProcessStartInfo cmdInfo = new ProcessStartInfo
+            {
+                FileName = "CMD.exe",
+                Arguments = "@echo off",
+                CreateNoWindow = true,
+                RedirectStandardInput = true,
+                UseShellExecute = false,
+            };
+            Process cmd = new Process();
+            cmd.StartInfo = cmdInfo;
+            cmd.Start();
+
+            StringBuilder commands = new StringBuilder("/C ");
+
+            while (_files.Count != 0)
+            {
+                FileInfo file = _files.Dequeue();
+                cmd.StandardInput.WriteLine(CommandString(file.FullName, destination.FullName));
+            }
+        }
+
+        public void Write(JObject data)
+        {
+            data[nameof(AsepritePath)] = AsepritePath;
+        }
+
+        public void Read(JObject data)
+        {
+            AsepritePath = (string)data[nameof(AsepritePath)];
         }
     }
 }

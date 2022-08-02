@@ -41,7 +41,11 @@ namespace Automat
 
             DropdownMenu.PlacementTarget = this;
             DropdownMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+            DropdownMenu.Width = ActualWidth;
             DropdownMenu.IsOpen = true;
+
+            foreach (MenuItem item in DropdownMenu.Items)
+                item.IsChecked = item.Header.Equals(Content);
         }
     }
 }

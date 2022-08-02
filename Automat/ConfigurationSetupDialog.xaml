@@ -24,20 +24,20 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="28"/>
                 <RowDefinition Height="5"/>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="28"/>
                 <RowDefinition Height="5"/>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="28"/>
             </Grid.RowDefinitions>
 
             <TextBlock VerticalAlignment="Center">Name:</TextBlock>
             <TextBlock VerticalAlignment="Center" Grid.Row="2">Source:</TextBlock>
             <TextBlock VerticalAlignment="Center" Grid.Row="4">Destination:</TextBlock>
 
-            <TextBox x:Name="NameHolder" VerticalAlignment="Center" Padding="5" Grid.Column="2" Grid.ColumnSpan="3">Untitled</TextBox>
-            <TextBox x:Name="SourceHolder" VerticalAlignment="Center" Padding="5" Grid.Row="2" Grid.Column="2"/>
-            <TextBox x:Name="DestinationHolder" VerticalAlignment="Center" Padding="5" Grid.Row="4" Grid.Column="2"/>
+            <TextBox x:Name="NameHolder" Grid.Column="2" Grid.ColumnSpan="3">Untitled</TextBox>
+            <TextBox x:Name="SourceHolder" Grid.Row="2" Grid.Column="2"/>
+            <TextBox x:Name="DestinationHolder" Grid.Row="4" Grid.Column="2"/>
 
             <Button x:Name="SelectSourceButton" Padding="5" Grid.Row="2" Grid.Column="4" Click="SelectSourceButton_Click">...</Button>
             <Button x:Name="SelectDestinationButton" Padding="5" Grid.Row="4" Grid.Column="4" Click="SelectDestinationButton_Click">...</Button>

@@ -24,33 +24,68 @@
         </ResourceDictionary>
     </UserControl.Resources>
     
-    <Border BorderThickness="0 0 1 1">
+    <Border BorderThickness="0 0 0 1">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="1"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <TextBlock Text="{Binding Name}" Margin="10 0 0 0" VerticalAlignment="Center"/>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" FlowDirection="LeftToRight">
-                <local:DropdownButton x:Name="ModeDropdown" BorderBrush="{StaticResource LightGrayBrush}" Margin="5 5 0 5" Padding="5" Width="250" HorizontalContentAlignment="Left"
-                                      DropdownMenu="{StaticResource ModeSelector}" Content="{Binding ConfigurationMode, Mode=TwoWay}">
-                </local:DropdownButton>
-                <Button x:Name="RunConfiguration" HorizontalAlignment="Right" Margin="5" Command="{Binding RunConfiguration}">Run</Button>
-            </StackPanel>
+            <Border Padding="5" BorderThickness="0 0 0 1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="5"/>
+                        <ColumnDefinition Width="250"/>
+                        <ColumnDefinition Width="5"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ToggleButton Content="{Binding Name}" IsChecked="{Binding Expanded, Mode=TwoWay}" HorizontalContentAlignment="Left">
+                        <ToggleButton.Template>
+                            <ControlTemplate TargetType="{x:Type ToggleButton}">
+                                <Border x:Name="Background" BorderThickness="0" BorderBrush="#c7c8cc" Background="WhiteSmoke">
+                                    <ContentPresenter VerticalAlignment="Center" Margin="5 0 0 0"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Background" Property="Background" Value="#ebebeb"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </ToggleButton.Template>
+                        <ToggleButton.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Rename..."/>
+                            </ContextMenu>
+                        </ToggleButton.ContextMenu>
+                    </ToggleButton>
+                    <local:DropdownButton x:Name="ModeDropdown" BorderBrush="{StaticResource LightGrayBrush}" 
+                                          Padding="5" HorizontalContentAlignment="Left"
+                                          Grid.Column="2" Width="250"
+                                          DropdownMenu="{StaticResource ModeSelector}" Content="{Binding ConfigurationMode, Mode=TwoWay}">
+                    </local:DropdownButton>
+                    <Button x:Name="RunConfiguration" Grid.Column="4" HorizontalAlignment="Right" Command="{Binding RunConfiguration}">Run</Button>
 
-            <Border Grid.Row="1" BorderBrush="#c7c8cc"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" FlowDirection="LeftToRight">
+                        
+                    </StackPanel>
+                </Grid>
+            </Border>
+            
+            <Border BorderThickness="0" >
+                
+            </Border>
 
-            <Border Grid.Row="2" Grid.ColumnSpan="5" BorderThickness="0" Background="#ebebeb">
-                <Grid Margin="0 0 5 5" >
+            <Border Visibility="{Binding Expanded, Converter={StaticResource VisibilityConverter}}" Grid.Row="2" Grid.ColumnSpan="5" BorderThickness="0" Background="#ebebeb">
+                <Grid >
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="5"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="5"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="5"/>
                     </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -58,23 +93,22 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="5"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="5"/>
+                        <RowDefinition Height="5.5"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="5.5"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="5"/>
-                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-
-
+                    
                     <TextBlock Text="Source" Grid.Row="2" VerticalAlignment="Center" Margin="10 0"/>
                     <TextBox x:Name="SourceHolder" Text="{Binding Source, Mode=TwoWay}" Grid.Row="2" Grid.Column="2"
-                            Padding="5" IsEnabled="False"
-                            VerticalAlignment="Center"/>
+                            Padding="5" IsEnabled="False" VerticalAlignment="Stretch" VerticalContentAlignment="Center"/>
                     <Button x:Name="SelectSourceButton" Grid.Row="2" Grid.Column="4" Padding="5 0"
                             Command="{Binding SelectSourceCommand}">...</Button>
 
                     <TextBlock Text="Destination" Grid.Row="4" VerticalAlignment="Center" Margin="10 0"/>
-                    <TextBox x:Name="DestinationHolder" Text="{Binding Destination, Mode=TwoWay}" 
-                             IsEnabled="False"
+                    <TextBox x:Name="DestinationHolder" Text="{Binding Destination, Mode=TwoWay}"
+                             IsEnabled="False" VerticalAlignment="Stretch" VerticalContentAlignment="Center"
                              Grid.Row="4" Grid.Column="2"/>
                     <Button x:Name="SelectDestinationButton" Grid.Row="4" Grid.Column="4" Padding="5 0"
                             Command="{Binding SelectDestinationCommand}">...</Button>

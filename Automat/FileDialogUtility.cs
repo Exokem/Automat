@@ -52,5 +52,18 @@ namespace Automat
 
             yield break;
         }
+
+        internal static string SelectFile(string title, string from = null)
+        {
+            using (var dialog = GetDialog(title, from: from))
+            {
+                if (dialog.ShowDialog() == CommonFileDialogResult.Ok)
+                {
+                    return dialog.FileName;
+                }
+            }
+
+            return null;
+        }
     }
 }
