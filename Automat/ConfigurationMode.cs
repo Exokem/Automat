@@ -128,15 +128,13 @@ namespace Automat
             {
                 FileName = "CMD.exe",
                 Arguments = "@echo off",
-                CreateNoWindow = true,
+                CreateNoWindow = false,
                 RedirectStandardInput = true,
                 UseShellExecute = false,
             };
             Process cmd = new Process();
             cmd.StartInfo = cmdInfo;
             cmd.Start();
-
-            StringBuilder commands = new StringBuilder("/C ");
 
             while (_files.Count != 0)
             {
