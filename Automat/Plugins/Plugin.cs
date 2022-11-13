@@ -45,6 +45,35 @@ namespace Automat.Plugins
 
     public class DeviceGeneratorPlugin : Plugin
     {
+        sealed class FieldValues
+        {
+            public string DisplayName { get; init; }
+            public string Identifier { get; init; }
+            public string UpperIdentifier { get; init; }
+            public string CategoryIdentifier { get; init; }
+            public string CategoryClass { get; init; }
+            public string ClassPrefix { get; init; }
+        }
+
+        static void TryWrite(FileInfo file, Func<string> data)
+        {
+            if (!file.Exists)
+            {
+                file.Create().Close();
+                file.WriteString(data());
+            }
+        }
+
+        static string ReplaceFields(string template, FieldValues data)
+        {
+            return template
+                .Replace(_categoryIdentifierKey, data.CategoryIdentifier)
+                .Replace(_categoryClassKey, data.CategoryClass)
+                .Replace(_identifierKey, data.Identifier)
+                .Replace(_upperIdentifierKey, data.UpperIdentifier)
+                .Replace(_classPrefixKey, data.ClassPrefix);
+        }
+
         readonly TextInputField _deviceName, _deviceCategory;
         readonly DirectoryInputField _packageDir, _resourceRoot;
         readonly CheckInputField _setupFormat;
@@ -65,6 +94,8 @@ namespace Automat.Plugins
 
             // This directory contains the device enumeration class and the package that will be created for the device being generated
             DirectoryInfo packageDir = new DirectoryInfo(_packageDir.Value);
+
+            DirectoryInfo resourceDir = new DirectoryInfo(_resourceRoot.Value);
 
             FieldValues data = new FieldValues
             {
@@ -88,6 +119,8 @@ namespace Automat.Plugins
             };
 
             GenerateDeviceClasses(packageDir, data);
+
+            GenerateDeviceResources(resourceDir, data);
         }
 
         const string _categoryIdentifierKey = "{$CATEGORY_IDENTIFIER}";
@@ -96,19 +129,13 @@ namespace Automat.Plugins
         const string _upperIdentifierKey = "{$UPPER_IDENTIFIER}";
         const string _classPrefixKey = "{$CLASS_PREFIX}";
 
+        #region Code Generation
+
         const string _deviceTemplate = "package xkv.voltaic.device.{$CATEGORY_IDENTIFIER}.{$IDENTIFIER};\r\n\r\nimport net.minecraft.core.BlockPos;\r\nimport net.minecraft.world.level.block.state.BlockState;\r\nimport xkv.pluton.device.DeviceBlockEntity;\r\nimport xkv.voltaic.axiom.Voltaic;\r\nimport xkv.voltaic.device.{$CATEGORY_IDENTIFIER}.{$CATEGORY_CLASS};\r\n\r\npublic class {$CLASS_PREFIX}Device extends DeviceBlockEntity\r\n{\r\n    public {$CLASS_PREFIX}Device(BlockPos position, BlockState state)\r\n    {\r\n        super({$CATEGORY_CLASS}.{$UPPER_IDENTIFIER}.type(), position, state);\r\n    }\r\n}";
         const string _screenTemplate = "package xkv.voltaic.device.{$CATEGORY_IDENTIFIER}.{$IDENTIFIER};\r\n\r\nimport net.minecraft.network.chat.Component;\r\nimport net.minecraft.world.entity.player.Inventory;\r\nimport xkv.pluton.device.DeviceScreen;\r\nimport xkv.voltaic.device.{$CATEGORY_IDENTIFIER}.{$CATEGORY_CLASS};\r\n\r\npublic class {$CLASS_PREFIX}Screen extends DeviceScreen<{$CLASS_PREFIX}Menu>\r\n{\r\n    public {$CLASS_PREFIX}Screen({$CLASS_PREFIX}Menu menu, Inventory inventory, Component title)\r\n    {\r\n        super(menu, inventory, title, {$CATEGORY_CLASS}.{$UPPER_IDENTIFIER}.identifier);\r\n    }\r\n}\r\n";
         const string _menuTemplate = "package xkv.voltaic.device.{$CATEGORY_IDENTIFIER}.{$IDENTIFIER};\r\n\r\nimport net.minecraft.core.BlockPos;\r\nimport net.minecraft.world.entity.player.Inventory;\r\nimport net.minecraft.world.entity.player.Player;\r\nimport net.minecraft.world.inventory.MenuType;\r\nimport org.jetbrains.annotations.Nullable;\r\nimport xkv.pluton.device.DeviceMenu;\r\nimport xkv.voltaic.device.{$CATEGORY_IDENTIFIER}.{$CATEGORY_CLASS};\r\n\r\npublic class {$CLASS_PREFIX}Menu extends DeviceMenu\r\n{\r\n    public {$CLASS_PREFIX}Menu(int _windowId, BlockPos _position, Inventory _inventory, Player _player)\r\n    {\r\n        super({$CATEGORY_CLASS}.{$UPPER_IDENTIFIER}.menu(), _windowId, _position, _inventory, _player);\r\n    }\r\n\r\n    @Override\r\n    protected void addDeviceSlots()\r\n    {\r\n\r\n    }\r\n}\r\n";
 
-        class FieldValues
-        {
-            public string DisplayName { get; init; }
-            public string Identifier { get; init; }
-            public string UpperIdentifier { get; init; }
-            public string CategoryIdentifier { get; init; }
-            public string CategoryClass { get; init; }
-            public string ClassPrefix { get; init; }
-        }
+        const string _enumEntryFlag = "// <%DEVICE_ENTRY_TARGET>";
 
         void GenerateDeviceClasses(DirectoryInfo packageDir, FieldValues data)
         {
@@ -124,35 +151,49 @@ namespace Automat.Plugins
             TryWrite(devicePackage.File($"{data.ClassPrefix}Device.java"), () => ReplaceFields(_deviceTemplate, data));
             TryWrite(devicePackage.File($"{data.ClassPrefix}Menu.java"), () => ReplaceFields(_menuTemplate, data));
             TryWrite(devicePackage.File($"{data.ClassPrefix}Screen.java"), () => ReplaceFields(_screenTemplate, data));
-        }
 
-        void TryWrite(FileInfo file, Func<string> data)
-        {
-            if (!file.Exists)
+            FileInfo categoryFile = packageDir.File($"{data.CategoryClass}.java");
+
+            if (categoryFile.Exists)
             {
-                file.Create().Close();
-                file.WriteString(data());
+                string categoryFileData = categoryFile.ReadString();
+
+                categoryFile.WriteString(categoryFileData.Replace(_enumEntryFlag, $"{data.UpperIdentifier},\r\n    {_enumEntryFlag}"));
             }
         }
 
-        string ReplaceFields(string template, FieldValues data)
-        {
-            return template
-                .Replace(_categoryIdentifierKey, data.CategoryIdentifier)
-                .Replace(_categoryClassKey, data.CategoryClass)
-                .Replace(_identifierKey, data.Identifier)
-                .Replace(_upperIdentifierKey, data.UpperIdentifier)
-                .Replace(_classPrefixKey, data.ClassPrefix);
-        }
+        #endregion
 
-        void GenerateDeviceResources(string displayName, string identifier)
+        #region Resource Generation
+
+        const string _blockModelTemplate = "{\"parent\": \"block/cube_all\", \"textures\": {\"all\": \"voltaic:blocks/{$IDENTIFIER}\"}}";
+        const string _blockStateTemplate = "{\r\n    \"variants\": {\r\n        \"facing=north,active=true\": { \"model\": \"voltaic:block/{$IDENTIFIER}\" }, \r\n        \"facing=east,active=true\": { \"model\": \"voltaic:block/{$IDENTIFIER}\", \"y\": 90 }, \r\n        \"facing=south,active=true\": { \"model\": \"voltaic:block/{$IDENTIFIER}\", \"y\": 180 }, \r\n        \"facing=west,active=true\": { \"model\": \"voltaic:block/{$IDENTIFIER}\", \"y\": 270 }, \r\n        \"facing=up,active=true\": { \"model\": \"voltaic:block/{$IDENTIFIER}\", \"x\": 270 }, \r\n        \"facing=down,active=true\": { \"model\": \"voltaic:block/{$IDENTIFIER}\", \"x\": 90 }, \r\n        \"facing=north,active=false\": { \"model\": \"voltaic:block/{$IDENTIFIER}\" }, \r\n        \"facing=east,active=false\":  { \"model\": \"voltaic:block/{$IDENTIFIER}\", \"y\": 90 }, \r\n        \"facing=south,active=false\": { \"model\": \"voltaic:block/{$IDENTIFIER}\", \"y\": 180 }, \r\n        \"facing=west,active=false\":  { \"model\": \"voltaic:block/{$IDENTIFIER}\", \"y\": 270 }, \r\n        \"facing=up,active=false\": { \"model\": \"voltaic:block/{$IDENTIFIER}\", \"x\": 270 }, \r\n        \"facing=down,active=false\": { \"model\": \"voltaic:block/{$IDENTIFIER}\", \"x\": 90 }\r\n    }\r\n}\r\n";
+        const string _itemModelTemplate = "{\"parent\" : \"voltaic:block/{$IDENTIFIER}\"}";
+
+        const string _autoEntryTarget = "\"${AUTO_ENTRY_TARGET}\": \"\"";
+
+        void GenerateDeviceResources(DirectoryInfo resourceRoot, FieldValues data)
         {
             // Inject locale entry
-            string locale = $"\"block.voltaic.{identifier}\": \"{displayName}\",";
+            string locale = $"\"block.voltaic.{data.Identifier}\": \"{data.DisplayName}\",";
 
+            TryWrite(resourceRoot.File($"assets\\voltaic\\models\\block\\{data.Identifier}.json"), () => _blockModelTemplate.Replace(_identifierKey, data.Identifier));
+            TryWrite(resourceRoot.File($"assets\\voltaic\\models\\item\\{data.Identifier}.json"), () => _itemModelTemplate.Replace(_identifierKey, data.Identifier));
+            TryWrite(resourceRoot.File($"assets\\voltaic\\blockstates\\{data.Identifier}.json"), () => _blockStateTemplate.Replace(_identifierKey, data.Identifier));
 
+            FileInfo localeFile = resourceRoot.File($"assets\\voltaic\\lang\\en_us.json");
 
+            if (localeFile.Exists)
+            {
+                string localeData = localeFile.ReadString();
+
+                localeFile.WriteString(localeData.Replace(_autoEntryTarget, $"{locale}\r\n  {_autoEntryTarget}"));
+            }
         }
+
+        #endregion
+
+        #region Serialization
 
         const string _lpd = "LastPackageDirectory";
         const string _lrr = "LastResourceRoot";
@@ -179,6 +220,6 @@ namespace Automat.Plugins
                 _resourceRoot.Value = data.GetString(_lrr);
         }
 
-        
+        #endregion
     }
 }
