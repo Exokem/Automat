@@ -4,42 +4,93 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Automat"
+        xmlns:a="clr-namespace:Automat.Plugins"
         
         mc:Ignorable="d" Background="{DynamicResource GainsboroBrush}"
         Title="Automat" Height="450" Width="800">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="Converter"/>
+        <ContextMenu x:Key="PanelSelection">
+            <MenuItem Header="Configurations" Command="{Binding PanelModeCommand}"
+                      CommandParameter="{Binding Source={x:Static local:MainViewModel.ConfigurationsMode}}"
+                          />
+            <MenuItem Header="Plugins" Command="{Binding PanelModeCommand}"
+                      CommandParameter="{Binding Source={x:Static local:MainViewModel.PluginsMode}}"
+                          />
+        </ContextMenu>
+    </Window.Resources>
 
     <Window.DataContext>
         <local:MainViewModel/>
     </Window.DataContext>
 
-    <Grid Margin="4.5 5 5 5">
+    <Grid x:Name="MainGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="5"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
+        
+        <Border Margin="5 5 5 0" Background="Whitesmoke">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition/>
+                    <ColumnDefinition/>
+                    <ColumnDefinition/>
+                </Grid.ColumnDefinitions>
 
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+                <local:DropdownButton Margin="5" Content="{Binding ModeName}" DropdownMenu="{StaticResource PanelSelection}">
 
-        <Border BorderThickness="1" Background="WhiteSmoke"/>
-
-        <Grid >
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-
-            <TextBlock VerticalAlignment="Center" Margin="10 0">Configurations</TextBlock>
-            <Button HorizontalAlignment="Right" x:Name="AddConfigurationButton" Margin="5 6"
-                        Grid.Column="1" Click="AddConfigurationButton_Click">Add Configuration</Button>
-        </Grid>
-        <Border Grid.Row="1"  Background="WhiteSmoke" Margin="0 5 0 0">
-            <ScrollViewer>
-                <StackPanel x:Name="ConfigurationHolder" Orientation="Vertical">
-
-                </StackPanel>
-            </ScrollViewer>
+                </local:DropdownButton>
+                <Button HorizontalAlignment="Stretch" x:Name="AddConfigurationButton" Margin="5 6" Grid.Column="2" Visibility="{Binding ShowConfigurationsPanel, Converter={StaticResource Converter}}"
+                        Click="AddConfigurationButton_Click">Add Configuration</Button>
+            </Grid>
         </Border>
+
+        <Grid x:Name="ContentHolder" Grid.Row="2">
+            <Grid x:Name="ConfigurationsPanel" Margin="4.5 0 5 5" Visibility="{Binding ShowConfigurationsPanel, Converter={StaticResource Converter}}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!--<Border BorderThickness="1" Background="WhiteSmoke"/>-->
+
+                <Grid >
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!--<TextBlock VerticalAlignment="Center" Margin="10 0">Configurations</TextBlock>-->
+                </Grid>
+                <Border Grid.Row="1"  Background="WhiteSmoke" Margin="0 0 0 0">
+                    <ScrollViewer Style="{StaticResource ScrollViewerStyle}">
+                        <StackPanel x:Name="ConfigurationHolder" Orientation="Vertical">
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
+            
+            <Grid x:Name="PluginsPanel" Margin="4.5 0 5 5" Visibility="{Binding ShowPluginsPanel, Converter={StaticResource Converter}}">
+                <ItemsControl ItemsSource="{Binding Plugins}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Vertical"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type a:Plugin}">
+                            <ContentControl Content="{Binding PluginView}"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+        </Grid>
     </Grid>
 </Window>

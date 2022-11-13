@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Automat.Plugins;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,7 +12,9 @@ namespace Automat
 {
     internal static class DataManager
     {
-        static readonly List<Configuration> _configurations = new List<Configuration>();
+        static readonly List<Configuration> _configurations = new();
+
+        //static readonly List<Plugin> _plugins = new();
 
         static readonly DirectoryInfo _appData = new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
         static readonly DirectoryInfo _saveDir = _appData.Directory("Automat");
@@ -40,9 +43,9 @@ namespace Automat
 
             IConfigurationMode.WriteExtraData(modeData);
 
-            JObject configurationData = new JObject();
+            JObject configurationData = new();
 
-            JArray configurations = new JArray();
+            JArray configurations = new();
 
             _configurations.ForEach(cfg => configurations.Add(cfg.Export()));
 
