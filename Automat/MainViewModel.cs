@@ -50,11 +50,7 @@ namespace Automat
         {
             PanelModeCommand = new Command(SetPanelMode);
 
-            _plugins = new List<Plugin>
-            {
-                new DeviceGeneratorPlugin(),
-
-            }.ToImmutableList();
+            _plugins = DataManager.Plugins.ToImmutableList();
         }
 
         void SetPanelMode(object o)

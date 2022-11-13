@@ -14,7 +14,10 @@ namespace Automat
     {
         static readonly List<Configuration> _configurations = new();
 
-        //static readonly List<Plugin> _plugins = new();
+        internal static readonly List<Plugin> Plugins = new()
+        {
+            new DeviceGeneratorPlugin(),
+        };
 
         static readonly DirectoryInfo _appData = new DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
         static readonly DirectoryInfo _saveDir = _appData.Directory("Automat");
@@ -51,6 +54,12 @@ namespace Automat
 
             configurationData["Configurations"] = configurations;
             configurationData["ModeData"] = modeData;
+
+            JObject pluginData = new();
+
+            Plugins.ForEach(p => pluginData.Add(p.Name, p.Export()));
+
+            configurationData["Plugins"] = pluginData;
 
             _saveFile.WriteString(configurationData.ToString());
         }
@@ -91,6 +100,32 @@ namespace Automat
                 Console.WriteLine(e.StackTrace);
             }
 
+            if (configurationData.ContainsKey("Plugins"))
+            {
+                try
+                {
+                    JObject pluginData = (JObject)configurationData["Plugins"];
+
+                    if (pluginData != null)
+                    {
+                        foreach (var plugin in Plugins)
+                        {
+                            if (pluginData.ContainsKey(plugin.Name))
+                            {
+                                JObject data = (JObject)pluginData[plugin.Name];
+                                if (data == null)
+                                    continue;
+                                plugin.Import(data);
+                            }
+                        }
+                    }
+                }
+
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.StackTrace);
+                }
+            }
         }
     }
 

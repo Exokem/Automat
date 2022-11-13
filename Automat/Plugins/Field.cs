@@ -68,6 +68,7 @@ namespace Automat.Plugins
             if (src != null)
             {
                 Value = src;
+                DataManager.Save();
             }
         }
     }

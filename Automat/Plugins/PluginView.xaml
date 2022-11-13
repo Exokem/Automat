@@ -32,7 +32,7 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             <ToggleButton x:Name="VisibilityControl" Padding="10" Content="{Binding Name, FallbackValue=Sample}" Style="{StaticResource ToggleButtonStyle}"
-                          Background="WhiteSmoke"
+                          Background="WhiteSmoke" IsChecked="True"
                           BorderThickness="0"/>
             <Button x:Name="ExecuteButton" VerticalAlignment="Center" VerticalContentAlignment="Center"
                     Margin="5 5 5 5" HorizontalAlignment="Right" Content="Execute" Command="{Binding ExecuteCommand}"/>
