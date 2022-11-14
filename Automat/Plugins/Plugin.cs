@@ -127,7 +127,7 @@ namespace Automat.Plugins
             GenerateDeviceResources(resourceDir, data);
 
             if (_setupFormat.Value)
-                GenerateFormatSetup(sourceDir, data);
+                GenerateFormatSetup(sourceDir, resourceDir, data);
         }
 
         const string _categoryIdentifierKey = "{$CATEGORY_IDENTIFIER}";
@@ -210,7 +210,7 @@ namespace Automat.Plugins
         const string _formatEntryTemplate = "public static RegistryObject<RecipeType<DeviceFormat>> {$UPPER_IDENTIFIER}_RECIPE;\r\n    public static RegistryObject<RecipeSerializer<?>> {$UPPER_IDENTIFIER}_SERIALIZER;\r\n";
         const string _formatInitTemplate = "{$UPPER_IDENTIFIER}_RECIPE = recipeType({$CATEGORY_CLASS}.{$UPPER_IDENTIFIER}.identifier);\r\n        {$UPPER_IDENTIFIER}_SERIALIZER = recipeSeralizer({$CATEGORY_CLASS}.{$UPPER_IDENTIFIER}.identifier, () -> new DeviceFormatSerializer( {$UPPER_IDENTIFIER}_RECIPE::get));\r\n";
 
-        void GenerateFormatSetup(DirectoryInfo sourceRoot, FieldValues data)
+        void GenerateFormatSetup(DirectoryInfo sourceRoot, DirectoryInfo resourceRoot, FieldValues data)
         {
             FileInfo registriesFile = sourceRoot.File("registry\\RecipeRegistry.java");
 
@@ -222,6 +222,11 @@ namespace Automat.Plugins
                     .Replace(_autoFormatEntryTarget, $"{ReplaceFields(_formatEntryTemplate, data)}\r\n    {_autoFormatEntryTarget}")
                     .Replace(_autoFormatInitTarget, $"{ReplaceFields(_formatInitTemplate, data)}\r\n        {_autoFormatInitTarget}"));
             }
+
+            DirectoryInfo formatFile = resourceRoot.Directory($"data\\voltaic\\recipes\\{data.Identifier}");
+
+            if (!formatFile.Exists)
+                formatFile.Create();
         }
 
         #endregion
