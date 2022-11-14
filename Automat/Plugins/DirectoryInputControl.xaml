@@ -12,7 +12,7 @@
             <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
         <TextBox x:Name="SourceHolder" Text="{Binding Value}" Grid.Column="0"
-                 Padding="5" IsEnabled="False" VerticalAlignment="Stretch" VerticalContentAlignment="Center"/>
+                 Padding="0 5" IsEnabled="False" VerticalAlignment="Stretch" VerticalContentAlignment="Center"/>
         <Button Grid.Column="2" Content="..." Command="{Binding SelectDirectoryCommand}" BorderThickness="0.5"/>
     </Grid>
 </UserControl>
