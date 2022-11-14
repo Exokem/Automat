@@ -75,27 +75,22 @@ namespace Automat.Plugins
         }
 
         readonly TextInputField _deviceName, _deviceCategory;
-        readonly DirectoryInputField _packageDir, _resourceRoot;
+        readonly DirectoryInputField _sourceDir, _resourceRoot;
         readonly CheckInputField _setupFormat;
 
         public DeviceGeneratorPlugin() : base("Device Generator")
         {
             _deviceName = AddField(new TextInputField("Device Name"));
             _deviceCategory = AddField(new TextInputField("Device Category"));
-            _packageDir = AddField(new DirectoryInputField("Package Directory"));
+            _sourceDir = AddField(new DirectoryInputField("Source Root Directory"));
             _resourceRoot = AddField(new DirectoryInputField("Resource Root Directory"));
             _setupFormat = AddField(new CheckInputField("Format Setup"));
         }
 
         protected override void Execute()
         {
-            if (string.IsNullOrEmpty(_deviceName.Value) || string.IsNullOrEmpty(_deviceCategory.Value) || string.IsNullOrEmpty(_packageDir.Value) || string.IsNullOrEmpty(_resourceRoot.Value))
+            if (string.IsNullOrEmpty(_deviceName.Value) || string.IsNullOrEmpty(_deviceCategory.Value) || string.IsNullOrEmpty(_sourceDir.Value) || string.IsNullOrEmpty(_resourceRoot.Value))
                 return;
-
-            // This directory contains the device enumeration class and the package that will be created for the device being generated
-            DirectoryInfo packageDir = new DirectoryInfo(_packageDir.Value);
-
-            DirectoryInfo resourceDir = new DirectoryInfo(_resourceRoot.Value);
 
             FieldValues data = new FieldValues
             {
@@ -118,9 +113,21 @@ namespace Automat.Plugins
                 CategoryClass = $"{_deviceCategory.Value.Replace(" ", "")}Device",
             };
 
+            // xkv.voltaic
+            DirectoryInfo sourceDir = new DirectoryInfo(_sourceDir.Value);
+
+            // This directory contains the device enumeration class and the package that will be created for the device being generated
+            // xkv.voltaic.devices.CATEGORY
+            DirectoryInfo packageDir = sourceDir.Directory($"device\\{data.CategoryIdentifier}");
+
+            DirectoryInfo resourceDir = new DirectoryInfo(_resourceRoot.Value);
+
             GenerateDeviceClasses(packageDir, data);
 
             GenerateDeviceResources(resourceDir, data);
+
+            if (_setupFormat.Value)
+                GenerateFormatSetup(sourceDir, data);
         }
 
         const string _categoryIdentifierKey = "{$CATEGORY_IDENTIFIER}";
@@ -172,6 +179,8 @@ namespace Automat.Plugins
 
         const string _autoEntryTarget = "\"${AUTO_ENTRY_TARGET}\": \"\"";
 
+        //xkv/voltaic/registry/RecipeRegistry.java
+
         void GenerateDeviceResources(DirectoryInfo resourceRoot, FieldValues data)
         {
             // Inject locale entry
@@ -193,6 +202,30 @@ namespace Automat.Plugins
 
         #endregion
 
+        #region Format Setup Generation
+
+        const string _autoFormatEntryTarget = "// ${AUTO_ENTRY_TARGET}";
+        const string _autoFormatInitTarget = "// ${AUTO_INIT_TARGET}";
+
+        const string _formatEntryTemplate = "public static RegistryObject<RecipeType<DeviceFormat>> {$UPPER_IDENTIFIER}_RECIPE;\r\n    public static RegistryObject<RecipeSerializer<?>> {$UPPER_IDENTIFIER}_SERIALIZER;\r\n";
+        const string _formatInitTemplate = "{$UPPER_IDENTIFIER}_RECIPE = recipeType({$CATEGORY_CLASS}.{$UPPER_IDENTIFIER}.identifier);\r\n        {$UPPER_IDENTIFIER}_SERIALIZER = recipeSeralizer({$CATEGORY_CLASS}.{$UPPER_IDENTIFIER}.identifier, () -> new DeviceFormatSerializer( {$UPPER_IDENTIFIER}_RECIPE::get));\r\n";
+
+        void GenerateFormatSetup(DirectoryInfo sourceRoot, FieldValues data)
+        {
+            FileInfo registriesFile = sourceRoot.File("registry\\RecipeRegistry.java");
+
+            if (registriesFile.Exists)
+            {
+                string fileData = registriesFile.ReadString();
+
+                registriesFile.WriteString(fileData
+                    .Replace(_autoFormatEntryTarget, $"{ReplaceFields(_formatEntryTemplate, data)}\r\n    {_autoFormatEntryTarget}")
+                    .Replace(_autoFormatInitTarget, $"{ReplaceFields(_formatInitTemplate, data)}\r\n        {_autoFormatInitTarget}"));
+            }
+        }
+
+        #endregion
+
         #region Serialization
 
         const string _lpd = "LastPackageDirectory";
@@ -202,8 +235,8 @@ namespace Automat.Plugins
         {
             JObject data = new();
 
-            if (!string.IsNullOrEmpty(_packageDir.Value))
-                data.Add(_lpd, _packageDir.Value);
+            if (!string.IsNullOrEmpty(_sourceDir.Value))
+                data.Add(_lpd, _sourceDir.Value);
 
             if (!string.IsNullOrEmpty(_resourceRoot.Value))
                 data.Add(_lrr, _resourceRoot.Value);
@@ -214,7 +247,7 @@ namespace Automat.Plugins
         public override void Import(JObject data)
         {
             if (data.ContainsKey(_lpd))
-                _packageDir.Value = data.GetString(_lpd);
+                _sourceDir.Value = data.GetString(_lpd);
 
             if (data.ContainsKey(_lrr))
                 _resourceRoot.Value = data.GetString(_lrr);
